@@ -21,9 +21,7 @@ set_tmux_option() {
 do_interpolation() {
   local string="$1"
   local play_status="#($CURRENT_DIR/scripts/play_status.sh)"
-  local token='#{play_control}'
-  string="${string/$token/$play_status}"
-  echo "$string"
+  echo "$string" | sed "s|#{play_control}|${play_status}|g"
 }
 
 update_tmux_option() {

@@ -62,18 +62,23 @@ interpolate_elapsed() {
   now=$(date +%s)
 
   if load_state; then
-    if [ "$saved_title" = "$title" ] && [ "$saved_rate" = "$rate" ]; then
-      # Same track and same play state — interpolate
-      local delta=$(( now - saved_ts ))
-      local base="${saved_elapsed%.*}"
-      local rate_int="${rate%.*}"
-      local computed=$(( base + delta * rate_int ))
-      echo "$computed"
-      return
+    if [ "$saved_title" = "$title" ]; then
+      if [ "$rate" = "0" ]; then
+        # Paused — freeze at saved position (reported elapsed is unreliable when null/0)
+        echo "$saved_elapsed"
+        return
+      elif [ "$saved_rate" = "$rate" ]; then
+        # Playing, same rate — interpolate forward
+        local delta=$(( now - saved_ts ))
+        local base="${saved_elapsed%.*}"
+        local computed=$(( base + delta ))
+        echo "$computed"
+        return
+      fi
     fi
   fi
 
-  # State changed or no saved state — save new snapshot and use reported value
+  # Track changed or transitioning play state — save new snapshot
   save_state "$title" "${elapsed%.*}" "$rate" "$now"
   echo "${elapsed%.*}"
 }
@@ -106,6 +111,11 @@ main() {
   if [ -z "$title" ] || [ "$title" = "null" ] || [ "$title" = "None" ]; then
     echo ""
     return
+  fi
+
+  # null means paused on macOS
+  if [ "$playback_rate" = "null" ] || [ -z "$playback_rate" ]; then
+    playback_rate="0"
   fi
 
   # Status symbol
