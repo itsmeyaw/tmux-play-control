@@ -21,7 +21,7 @@ set_tmux_option() {
 do_interpolation() {
     local string="$1"
     local play_status="#($CURRENT_DIR/scripts/play_status.sh)"
-    string="${string/\#{play_status}/$play_status}"
+    string="${string/\#{play_control}/$play_status}"
     echo "$string"
 }
 
@@ -36,11 +36,11 @@ update_tmux_option() {
 
 setup_keybindings() {
     local key_toggle key_next key_prev key_seek_forward key_seek_backward
-    key_toggle=$(get_tmux_option "@play_status_toggle" "P")
-    key_next=$(get_tmux_option "@play_status_next" "N")
-    key_prev=$(get_tmux_option "@play_status_prev" "B")
-    key_seek_forward=$(get_tmux_option "@play_status_seek_forward" "}")
-    key_seek_backward=$(get_tmux_option "@play_status_seek_backward" "{")
+    key_toggle=$(get_tmux_option "@play_control_toggle" "P")
+    key_next=$(get_tmux_option "@play_control_next" "N")
+    key_prev=$(get_tmux_option "@play_control_prev" "B")
+    key_seek_forward=$(get_tmux_option "@play_control_seek_forward" "}")
+    key_seek_backward=$(get_tmux_option "@play_control_seek_backward" "{")
 
     tmux bind-key "$key_toggle" run-shell "$CURRENT_DIR/scripts/control.sh togglePlayPause"
     tmux bind-key "$key_next" run-shell "$CURRENT_DIR/scripts/control.sh next"

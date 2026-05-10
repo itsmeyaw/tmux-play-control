@@ -8,7 +8,7 @@ Shows: play/pause state, media type, artist - title, and elapsed/duration time.
 
 ```
 ▶ ♫ Daft Punk - Get Lucky [2:35/6:09]
-⏸ 🎬 The Matrix [1:23:45/2:16:30]
+⏸ 🎦 The Matrix [1:23:45/2:16:30]
 ```
 
 ## Requirements

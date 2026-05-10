@@ -38,7 +38,7 @@ format_time() {
 
 main() {
   local max_length
-  max_length=$(get_tmux_option "@play_status_max_length" "$MAX_TITLE_LENGTH")
+  max_length=$(get_tmux_option "@play_control_max_length" "$MAX_TITLE_LENGTH")
 
   if ! command -v nowplaying-cli &>/dev/null; then
     echo ""
