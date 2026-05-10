@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 MAX_TITLE_LENGTH=30
+STATE_FILE="${TMPDIR:-/tmp}/tmux_play_status_state"
 
 get_tmux_option() {
   local option="$1"
@@ -30,10 +31,51 @@ format_time() {
     echo "--:--"
     return
   fi
+  # truncate to integer
   seconds="${seconds%.*}"
   local minutes=$((seconds / 60))
   local secs=$((seconds % 60))
   printf "%d:%02d" "$minutes" "$secs"
+}
+
+# macOS MediaRemote only snapshots elapsedTime on play/pause/seek events.
+# We save that snapshot plus the system timestamp, then interpolate.
+save_state() {
+  local title="$1" elapsed="$2" rate="$3" ts="$4"
+  printf '%s\n%s\n%s\n%s\n' "$title" "$elapsed" "$rate" "$ts" > "$STATE_FILE"
+}
+
+load_state() {
+  # outputs: saved_title saved_elapsed saved_rate saved_ts
+  if [ ! -f "$STATE_FILE" ]; then
+    return 1
+  fi
+  saved_title=$(sed -n '1p' "$STATE_FILE")
+  saved_elapsed=$(sed -n '2p' "$STATE_FILE")
+  saved_rate=$(sed -n '3p' "$STATE_FILE")
+  saved_ts=$(sed -n '4p' "$STATE_FILE")
+}
+
+interpolate_elapsed() {
+  local elapsed="$1" rate="$2" title="$3"
+  local now
+  now=$(date +%s)
+
+  if load_state; then
+    if [ "$saved_title" = "$title" ] && [ "$saved_rate" = "$rate" ]; then
+      # Same track and same play state — interpolate
+      local delta=$(( now - saved_ts ))
+      local base="${saved_elapsed%.*}"
+      local rate_int="${rate%.*}"
+      local computed=$(( base + delta * rate_int ))
+      echo "$computed"
+      return
+    fi
+  fi
+
+  # State changed or no saved state — save new snapshot and use reported value
+  save_state "$title" "${elapsed%.*}" "$rate" "$now"
+  echo "${elapsed%.*}"
 }
 
 main() {
@@ -94,9 +136,18 @@ main() {
   fi
   display_title=$(truncate_string "$display_title" "$max_length")
 
-  # Format time
+  # Interpolate elapsed time since macOS only snapshots it on state changes
+  local elapsed_interp
+  elapsed_interp=$(interpolate_elapsed "$elapsed" "$playback_rate" "$title")
+
+  # Clamp to duration
+  local dur_int="${duration%.*}"
+  if [ -n "$dur_int" ] && [ "$elapsed_interp" -gt "$dur_int" ] 2>/dev/null; then
+    elapsed_interp="$dur_int"
+  fi
+
   local elapsed_fmt duration_fmt time_display
-  elapsed_fmt=$(format_time "$elapsed")
+  elapsed_fmt=$(format_time "$elapsed_interp")
   duration_fmt=$(format_time "$duration")
   time_display="$elapsed_fmt/$duration_fmt"
 
